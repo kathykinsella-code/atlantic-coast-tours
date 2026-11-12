@@ -12,6 +12,7 @@
  *   SHEET_NAME          – optional, tab to read (default: first tab)
  */
 
+const SHEET_ID = '1sJMEWKTMMRe2Kx_LvX9YvpsiENgLYU4w9s2H_H1yvgg';
 const MAX_HISTORY = 10;
 const MAX_MESSAGE_CHARS = 1000;
 
@@ -48,7 +49,7 @@ function doPost(e) {
 }
 
 function readTours_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = SpreadsheetApp.getActiveSpreadsheet() || SpreadsheetApp.openById(SHEET_ID);
   const name = PropertiesService.getScriptProperties().getProperty('SHEET_NAME');
   const sheet = name ? ss.getSheetByName(name) : ss.getSheets()[0];
   const values = sheet.getDataRange().getDisplayValues();

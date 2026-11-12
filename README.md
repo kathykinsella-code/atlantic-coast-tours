@@ -14,7 +14,7 @@ GitHub Page (index.html)  ──►  Google Apps Script web app  ──►  Goog
 
 ## Setup
 
-1. Open the Google Sheet → **Extensions → Apps Script**.
+1. Open the [Google Sheet](https://docs.google.com/spreadsheets/d/1sJMEWKTMMRe2Kx_LvX9YvpsiENgLYU4w9s2H_H1yvgg/edit) → **Extensions → Apps Script**.
 2. Replace the contents of `Code.gs` with [`apps-script/Code.gs`](apps-script/Code.gs) and save.
 3. **Project Settings (⚙) → Script properties → Add**: `GEMINI_API_KEY` (or `ANTHROPIC_API_KEY` for Claude).
 4. **Deploy → New deployment → Web app**: Execute as **Me**, Who has access **Anyone** → Deploy, authorise, copy the `/exec` URL.
