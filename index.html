@@ -1,214 +1,283 @@
-<!doctype html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Atlantic Coast Tours – Ask Us Anything</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ask Atlantic · Atlantic Coast Tours</title>
 <style>
   :root {
-    --bg: #f4f1ea; --surface: #ffffff; --ink: #1d2a33; --muted: #5d6b74;
-    --sea: #0e5a6b; --sea-2: #127a8f; --foam: #e3f0f2; --sand: #e9dfcb;
-    --line: #dcd6c8; --warn: #a14b1c;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg:#0f171c; --surface:#17232a; --ink:#e6eef1; --muted:#9aaab2;
-      --sea:#4fb3c5; --sea-2:#6cc6d6; --foam:#1d3138; --sand:#2a2a22; --line:#2a3a42; --warn:#e39566; }
+    --navy: #0b2a3f;
+    --navy-2: #12405e;
+    --foam: #3fb6a8;
+    --foam-soft: #e3f4f1;
+    --sand: #f6efe2;
+    --ink: #17252f;
+    --muted: #6b7c87;
+    --bg: #eef3f5;
+    --bot-bubble: #ffffff;
+    --user-bubble: #f6e7c8;
+    --error-bg: #fdecea;
+    --error-ink: #9b2c1f;
+    --radius: 18px;
   }
   * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 Inter, system-ui, sans-serif; }
-  header { background:linear-gradient(160deg, #0b4553, #127a8f); color:#fff; padding:28px 16px 64px; }
-  .wrap { max-width:1100px; margin:0 auto; }
-  header h1 { font-family:Fraunces, Georgia, serif; font-size:clamp(1.7rem,4vw,2.5rem); margin:0 0 6px; }
-  header p { margin:0; opacity:.9; max-width:60ch; }
-  main { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); gap:20px; margin-top:-40px; padding:0 16px 40px; }
-  @media (max-width:860px){ main { grid-template-columns:1fr; } }
-  .card { background:var(--surface); border:1px solid var(--line); border-radius:16px; box-shadow:0 6px 24px rgba(0,0,0,.07); }
-  /* Chat */
-  .chat { display:flex; flex-direction:column; height:min(78vh,720px); }
-  .chat-head { padding:14px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px; }
-  .dot { width:10px; height:10px; border-radius:50%; background:#2bb673; box-shadow:0 0 0 3px rgba(43,182,115,.2); }
-  .chat-head strong { font-weight:600; }
-  .chat-head span { color:var(--muted); font-size:.85rem; }
-  #log { flex:1; overflow-y:auto; padding:18px; display:flex; flex-direction:column; gap:12px; }
-  .msg { max-width:85%; padding:10px 14px; border-radius:14px; white-space:pre-wrap; word-wrap:break-word; }
-  .bot { background:var(--foam); align-self:flex-start; border-bottom-left-radius:4px; }
-  .user { background:var(--sea); color:#fff; align-self:flex-end; border-bottom-right-radius:4px; }
-  .err { background:transparent; color:var(--warn); border:1px solid var(--warn); }
-  .typing { color:var(--muted); font-style:italic; }
-  .chips { display:flex; flex-wrap:wrap; gap:8px; padding:0 18px 10px; }
-  .chip { border:1px solid var(--line); background:var(--surface); color:var(--ink); border-radius:999px; padding:6px 12px; font:inherit; font-size:.85rem; cursor:pointer; }
-  .chip:hover { border-color:var(--sea); color:var(--sea); }
-  form { display:flex; gap:8px; padding:12px; border-top:1px solid var(--line); }
-  input { flex:1; min-width:0; padding:12px 14px; border-radius:12px; border:1px solid var(--line); background:var(--bg); color:var(--ink); font:inherit; }
-  input:focus { outline:2px solid var(--sea-2); outline-offset:1px; }
-  button.send { background:var(--sea); color:#fff; border:0; border-radius:12px; padding:0 18px; font:inherit; font-weight:600; cursor:pointer; }
-  button.send:disabled { opacity:.5; cursor:default; }
-  /* Tours */
-  .tours { padding:16px; height:min(78vh,720px); display:flex; flex-direction:column; }
-  .tours h2 { font-family:Fraunces, Georgia, serif; font-size:1.25rem; margin:2px 4px 10px; }
-  .filters { display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
-  .filters input, .filters select { padding:8px 10px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--ink); font:inherit; font-size:.9rem; }
-  .filters input { flex:1; min-width:140px; }
-  #tourList { overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding-right:2px; }
-  .tour { border:1px solid var(--line); border-radius:12px; padding:12px 14px; cursor:pointer; background:var(--surface); }
-  .tour:hover { border-color:var(--sea); }
-  .tour-top { display:flex; justify-content:space-between; gap:10px; align-items:baseline; }
-  .tour h3 { font-size:1rem; margin:0; }
-  .price { font-weight:600; color:var(--sea); white-space:nowrap; }
-  .meta { color:var(--muted); font-size:.85rem; margin-top:2px; }
-  .tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
-  .tag { font-size:.75rem; padding:2px 8px; border-radius:999px; background:var(--sand); }
-  .tag.full { background:transparent; border:1px solid var(--warn); color:var(--warn); }
-  .tag.offer { background:var(--foam); color:var(--sea); }
-  .note { color:var(--muted); font-size:.8rem; margin:8px 4px 0; }
-  footer { text-align:center; color:var(--muted); font-size:.8rem; padding:0 16px 30px; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    display: flex;
+    justify-content: center;
+  }
+  .app {
+    width: 100%;
+    max-width: 720px;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+  }
+  header {
+    background: linear-gradient(135deg, var(--navy), var(--navy-2));
+    color: #fff;
+    padding: 16px 16px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+  header::after { /* subtle wave */
+    content: "";
+    position: absolute; left: 0; right: 0; bottom: -1px; height: 10px;
+    background: radial-gradient(circle at 10px -4px, transparent 12px, var(--bg) 13px) repeat-x;
+    background-size: 20px 10px;
+  }
+  .logo {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--foam);
+    display: grid; place-items: center;
+    flex-shrink: 0;
+  }
+  .logo svg { width: 24px; height: 24px; }
+  header h1 { font-size: 1.1rem; margin: 0; letter-spacing: .2px; }
+  header p { font-size: .8rem; margin: 2px 0 0; opacity: .8; }
+
+  #chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 16px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .msg { display: flex; flex-direction: column; max-width: 85%; }
+  .msg.bot { align-self: flex-start; }
+  .msg.user { align-self: flex-end; align-items: flex-end; }
+  .bubble {
+    padding: 11px 14px;
+    border-radius: var(--radius);
+    line-height: 1.45;
+    font-size: .95rem;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    box-shadow: 0 1px 2px rgba(11, 42, 63, .08);
+  }
+  .bot .bubble { background: var(--bot-bubble); border-bottom-left-radius: 6px; border-left: 3px solid var(--foam); }
+  .user .bubble { background: var(--user-bubble); border-bottom-right-radius: 6px; }
+  .error .bubble { background: var(--error-bg); color: var(--error-ink); border-left-color: var(--error-ink); }
+  .meta { font-size: .72rem; color: var(--muted); margin: 4px 6px 0; }
+
+  .thinking .bubble { color: var(--muted); font-style: italic; }
+  .dots span {
+    display: inline-block; width: 5px; height: 5px; margin-left: 3px;
+    border-radius: 50%; background: var(--foam);
+    animation: bob 1.2s infinite ease-in-out;
+  }
+  .dots span:nth-child(2) { animation-delay: .15s; }
+  .dots span:nth-child(3) { animation-delay: .3s; }
+  @keyframes bob { 0%, 80%, 100% { transform: translateY(0); opacity: .4; } 40% { transform: translateY(-4px); opacity: 1; } }
+
+  .suggestions { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 16px 8px; }
+  .suggestions button {
+    border: 1px solid var(--foam);
+    background: var(--foam-soft);
+    color: var(--navy);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: .8rem;
+    cursor: pointer;
+  }
+
+  form {
+    display: flex;
+    gap: 8px;
+    padding: 10px 16px calc(12px + env(safe-area-inset-bottom));
+    background: #fff;
+    border-top: 1px solid #dde6ea;
+  }
+  input {
+    flex: 1;
+    min-width: 0;
+    font-size: 1rem; /* 16px avoids iOS zoom */
+    padding: 12px 14px;
+    border: 1px solid #cfdbe1;
+    border-radius: 999px;
+    outline: none;
+    background: var(--sand);
+  }
+  input:focus { border-color: var(--foam); box-shadow: 0 0 0 3px rgba(63, 182, 168, .2); }
+  button[type="submit"] {
+    border: 0;
+    border-radius: 999px;
+    padding: 0 20px;
+    font-size: .95rem;
+    font-weight: 600;
+    background: var(--navy);
+    color: #fff;
+    cursor: pointer;
+  }
+  button[type="submit"]:disabled { opacity: .5; cursor: default; }
+
+  @media (min-width: 720px) {
+    .app { height: calc(100dvh - 32px); margin: 16px 0; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(11, 42, 63, .12); }
+  }
 </style>
 </head>
 <body>
-<header>
-  <div class="wrap">
-    <h1>Atlantic Coast Tours</h1>
-    <p>Ask our assistant about prices, availability, meeting points, offers and anything else about our tours on the Wild Atlantic Way.</p>
+<div class="app">
+  <header>
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round">
+        <path d="M2 15c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2"/>
+        <path d="M2 19c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2"/>
+        <path d="M12 3v7M8 7l4-4 4 4"/>
+      </svg>
+    </div>
+    <div>
+      <h1>Ask Atlantic</h1>
+      <p>Atlantic Coast Tours · live tour info</p>
+    </div>
+  </header>
+
+  <main id="chat" aria-live="polite"></main>
+
+  <div class="suggestions" id="suggestions">
+    <button type="button">Which tours have slots this week?</button>
+    <button type="button">What's the cheapest tour?</button>
+    <button type="button">Any special offers?</button>
   </div>
-</header>
 
-<main class="wrap">
-  <section class="card chat" aria-label="Chat with our assistant">
-    <div class="chat-head"><div class="dot"></div><div><strong>Tour Assistant</strong><br><span>Live tour info, straight from our schedule</span></div></div>
-    <div id="log" aria-live="polite"></div>
-    <div class="chips" id="chips">
-      <button class="chip">Which tours have spots this week?</button>
-      <button class="chip">What's on special offer?</button>
-      <button class="chip">Cheapest tours under €50</button>
-      <button class="chip">Family-friendly options in Mayo?</button>
-    </div>
-    <form id="form">
-      <input id="input" autocomplete="off" placeholder="Ask about a tour, price or availability…" maxlength="1000" aria-label="Your question">
-      <button class="send" id="send" type="submit">Send</button>
-    </form>
-  </section>
+  <form id="form" autocomplete="off">
+    <input id="input" type="text" placeholder="Ask about tours, prices, slots…" aria-label="Your question" required>
+    <button type="submit" id="send">Send</button>
+  </form>
+</div>
 
-  <aside class="card tours" aria-label="Our tours">
-    <h2>Our tours</h2>
-    <div class="filters">
-      <input id="q" placeholder="Search tours or places…" aria-label="Search tours">
-      <select id="cat" aria-label="Category"><option value="">All categories</option></select>
-    </div>
-    <div id="tourList"><p class="note">Loading tours…</p></div>
-    <p class="note" id="updated"></p>
-  </aside>
-</main>
-<footer>Tour details update live from our booking sheet.</footer>
-
-<script src="config.js"></script>
 <script>
-const API = window.CHATBOT_API_URL;
-const configured = API && !API.startsWith('PASTE_');
-const log = document.getElementById('log');
-const form = document.getElementById('form');
-const input = document.getElementById('input');
-const sendBtn = document.getElementById('send');
-const history = [];
-let tours = [];
+  const CSV_URL = "https://docs.google.com/spreadsheets/d/1balBGf8QhZ5dc-RCCAPt2kcrcf6m_YRh0HL_r8bBtJw/export?format=csv";
+  const BRAIN_URL = "https://luas-class.kluxy.app/chat";
+  const SYSTEM = "You are Ask Atlantic, the customer assistant for Atlantic Coast Tours. Answer only from the live data you are given. Quote exact prices in euro and slots left. If something is not in the data, say so. If a value looks implausible, say so and suggest the customer checks with staff. Be warm and brief.";
 
-function addMsg(text, cls) {
-  const d = document.createElement('div');
-  d.className = 'msg ' + cls;
-  d.textContent = text;
-  log.appendChild(d);
-  log.scrollTop = log.scrollHeight;
-  return d;
-}
+  const chat = document.getElementById("chat");
+  const form = document.getElementById("form");
+  const input = document.getElementById("input");
+  const send = document.getElementById("send");
+  const suggestions = document.getElementById("suggestions");
 
-addMsg("Hi! 👋 I can help you find the right tour: prices, free slots this week, meeting points and current offers. What are you looking for?", 'bot');
-
-async function ask(text) {
-  text = text.trim();
-  if (!text) return;
-  addMsg(text, 'user');
-  input.value = '';
-  sendBtn.disabled = true;
-  const typing = addMsg('Checking our schedule…', 'bot typing');
-  try {
-    if (!configured) throw new Error('The chatbot backend has not been connected yet.');
-    // text/plain avoids a CORS preflight, which Apps Script doesn't support.
-    const res = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ message: text, history }) });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    typing.className = 'msg bot';
-    typing.textContent = data.reply;
-    history.push({ role: 'user', text }, { role: 'assistant', text: data.reply });
-  } catch (e) {
-    typing.className = 'msg bot err';
-    typing.textContent = e.message || 'Sorry, I could not reach the assistant. Please try again.';
-  } finally {
-    sendBtn.disabled = false;
-    input.focus();
+  function addMessage(text, who, opts = {}) {
+    const wrap = document.createElement("div");
+    wrap.className = "msg " + who + (opts.error ? " error" : "") + (opts.thinking ? " thinking" : "");
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    if (opts.thinking) {
+      bubble.innerHTML = 'Thinking<span class="dots"><span></span><span></span><span></span></span>';
+    } else {
+      bubble.textContent = text; // textContent: never inject HTML from data or replies
+    }
+    wrap.appendChild(bubble);
+    if (opts.meta) {
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      meta.textContent = opts.meta;
+      wrap.appendChild(meta);
+    }
+    chat.appendChild(wrap);
+    chat.scrollTop = chat.scrollHeight;
+    return wrap;
   }
-}
 
-form.addEventListener('submit', e => { e.preventDefault(); ask(input.value); });
-document.getElementById('chips').addEventListener('click', e => {
-  if (e.target.classList.contains('chip')) ask(e.target.textContent);
-});
-
-// ---- Live tour list ----
-const listEl = document.getElementById('tourList');
-const qEl = document.getElementById('q');
-const catEl = document.getElementById('cat');
-
-function el(tag, cls, text) { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
-
-function renderTours() {
-  const q = qEl.value.toLowerCase();
-  const cat = catEl.value;
-  const shown = tours.filter(t =>
-    (!cat || t.category === cat) &&
-    (!q || [t.tour_name, t.location, t.description, t.category].join(' ').toLowerCase().includes(q)));
-  listEl.replaceChildren();
-  if (!shown.length) { listEl.appendChild(el('p', 'note', 'No tours match.')); return; }
-  for (const t of shown) {
-    const card = el('div', 'tour');
-    card.tabIndex = 0;
-    const top = el('div', 'tour-top');
-    top.append(el('h3', null, t.tour_name), el('span', 'price', '€' + Number(t.price_eur).toLocaleString('en-IE')));
-    card.append(top, el('div', 'meta', `${t.location} · ${t.duration_hours}h · ${t.availability}`));
-    const tags = el('div', 'tags');
-    tags.append(el('span', 'tag', t.category));
-    const slots = Number(t.slots_this_week);
-    tags.append(slots > 0 ? el('span', 'tag', `${slots} spots this week`) : el('span', 'tag full', 'Full this week'));
-    if (t.special_offer) tags.append(el('span', 'tag offer', t.special_offer));
-    card.append(tags);
-    const askAbout = () => ask(`Tell me more about the ${t.tour_name}`);
-    card.addEventListener('click', askAbout);
-    card.addEventListener('keydown', e => { if (e.key === 'Enter') askAbout(); });
-    listEl.appendChild(card);
+  function timeNow() {
+    const d = new Date();
+    return [d.getHours(), d.getMinutes(), d.getSeconds()].map(n => String(n).padStart(2, "0")).join(":");
   }
-}
 
-async function loadTours() {
-  if (!configured) { listEl.replaceChildren(el('p', 'note', 'Tour list will appear once the backend is connected.')); return; }
-  try {
-    const res = await fetch(API + '?action=tours');
-    const data = await res.json();
-    tours = data.tours || [];
-    const cats = [...new Set(tours.map(t => t.category).filter(Boolean))].sort();
-    const current = catEl.value;
-    catEl.replaceChildren(new Option('All categories', ''), ...cats.map(c => new Option(c, c)));
-    catEl.value = current;
-    renderTours();
-    document.getElementById('updated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-IE', { hour: '2-digit', minute: '2-digit' });
-  } catch {
-    listEl.replaceChildren(el('p', 'note', 'Could not load tours right now.'));
+  async function fetchCsv() {
+    // Cache-buster + no-store so every question sees the latest sheet edits
+    const res = await fetch(CSV_URL + "&t=" + Date.now(), { cache: "no-store" });
+    if (!res.ok) throw new Error("Couldn't load the tour catalogue (HTTP " + res.status + "). Is the sheet shared as 'Anyone with the link'?");
+    const csv = await res.text();
+    if (/^\s*<!DOCTYPE html/i.test(csv)) throw new Error("The sheet returned a web page instead of CSV. Check it is shared as 'Anyone with the link can view'.");
+    return { csv, fetchedAt: timeNow() };
   }
-}
-qEl.addEventListener('input', renderTours);
-catEl.addEventListener('change', renderTours);
-loadTours();
-setInterval(loadTours, 60000); // refresh the list every minute so sheet edits appear
+
+  async function askBrain(question, csv) {
+    const res = await fetch(BRAIN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        system: SYSTEM,
+        messages: [{ role: "user", content: "Live data (CSV):\n" + csv + "\n\nCustomer question: " + question }]
+      })
+    });
+    const raw = await res.text();
+    let data;
+    try { data = JSON.parse(raw); } catch { throw new Error("The assistant sent an unexpected response (HTTP " + res.status + "): " + raw.slice(0, 200)); }
+    if (!res.ok) throw new Error("The assistant returned an error (HTTP " + res.status + "): " + (data.error || data.message || raw.slice(0, 200)));
+    if (typeof data.reply !== "string") throw new Error("The assistant's response had no \"reply\" field.");
+    return data.reply;
+  }
+
+  async function handleQuestion(question) {
+    question = question.trim();
+    if (!question) return;
+    suggestions.style.display = "none";
+    addMessage(question, "user");
+    input.value = "";
+    input.disabled = true;
+    send.disabled = true;
+    const thinking = addMessage("", "bot", { thinking: true });
+
+    try {
+      const { csv, fetchedAt } = await fetchCsv();
+      const reply = await askBrain(question, csv);
+      thinking.remove();
+      addMessage(reply, "bot", { meta: "Data fetched live at " + fetchedAt });
+    } catch (err) {
+      thinking.remove();
+      const msg = err instanceof TypeError
+        ? "Network error: " + err.message + " (check your connection, or the service may be blocking this page)."
+        : err.message;
+      addMessage("Sorry, something went wrong. " + msg, "bot", { error: true });
+    } finally {
+      input.disabled = false;
+      send.disabled = false;
+      input.focus();
+    }
+  }
+
+  // Submitting the form covers both the Send button and the Enter key
+  form.addEventListener("submit", e => {
+    e.preventDefault();
+    handleQuestion(input.value);
+  });
+
+  suggestions.addEventListener("click", e => {
+    if (e.target.tagName === "BUTTON") handleQuestion(e.target.textContent);
+  });
+
+  addMessage("Hi! I'm Ask Atlantic 🌊 Ask me anything about our tours: prices, slots this week, meeting points or special offers.", "bot");
+  input.focus();
 </script>
 </body>
 </html>
