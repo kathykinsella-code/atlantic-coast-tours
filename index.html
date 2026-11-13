@@ -134,6 +134,23 @@
   .place small { display: block; font-weight: 400; opacity: .85; }
   .place:disabled { cursor: default; opacity: .7; }
 
+  /* Caution box shown under answers that mention unusual figures */
+  .msg.cautious .bubble { border-left-color: #d99a00; }
+  .caution {
+    margin-top: 6px;
+    background: #fff6e0;
+    border: 1px solid #f0d48a;
+    border-left: 3px solid #d99a00;
+    color: #5e4100;
+    border-radius: 12px;
+    padding: 9px 12px;
+    font-size: .82rem;
+    line-height: 1.4;
+  }
+  .caution strong { display: block; }
+  .caution ul { margin: 4px 0 4px; padding-left: 18px; }
+  .caution p { margin: 0; }
+
   .thinking .bubble { color: var(--muted); font-style: italic; }
   .dots span {
     display: inline-block; width: 5px; height: 5px; margin-left: 3px;
@@ -297,6 +314,116 @@
     return data.reply;
   }
 
+  // ---------- Safety checks on the live data ----------
+  // Runs in the page on every fetch, independently of the AI, so a wrong or
+  // manipulated figure in the sheet is always flagged to the customer.
+  const LIMITS = { priceMin: 10, priceMax: 300, durMin: 0.5, durMax: 14, capMax: 100 };
+  const SUSPICIOUS_TEXT = /note to (the )?ai|ignore (all|any|previous|the)|do not correct|don't correct|system prompt|you must (say|answer)/i;
+
+  function parseCsv(text) {
+    const rows = []; let row = [], field = "", inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (inQuotes) {
+        if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else inQuotes = false; }
+        else field += c;
+      } else if (c === '"') inQuotes = true;
+      else if (c === ",") { row.push(field); field = ""; }
+      else if (c === "\n" || c === "\r") {
+        if (c === "\r" && text[i + 1] === "\n") i++;
+        row.push(field); rows.push(row); row = []; field = "";
+      } else field += c;
+    }
+    if (field !== "" || row.length) { row.push(field); rows.push(row); }
+    const head = (rows.shift() || []).map(h => h.trim());
+    return rows
+      .filter(r => r.some(v => v.trim()))
+      .map(r => Object.fromEntries(head.map((h, i) => [h, (r[i] || "").trim()])));
+  }
+
+  function toNumber(v) {
+    const s = String(v ?? "").replace(/[€,\s]/g, "").replace(/\.$/, "");
+    if (s === "") return null;
+    const n = Number(s);
+    return isNaN(n) ? null : n;
+  }
+  const euro = n => "€" + n.toLocaleString("en-IE");
+
+  function auditTours(rows) {
+    return rows.map(t => {
+      const issues = [], values = [];
+      const price = toNumber(t.price_eur), dur = toNumber(t.duration_hours),
+            cap = toNumber(t.capacity), slots = toNumber(t.slots_this_week);
+
+      if (price === null) issues.push("the price is missing or not a number");
+      else if (price < LIMITS.priceMin || price > LIMITS.priceMax) {
+        issues.push("the listed price of " + euro(price) + " looks unusual for a tour");
+        values.push(price);
+      }
+      if (dur === null || dur < LIMITS.durMin || dur > LIMITS.durMax)
+        issues.push("the duration (" + (t.duration_hours || "blank") + " hours) looks wrong");
+      if (cap === null || cap <= 0 || cap > LIMITS.capMax)
+        issues.push("the group size (" + (t.capacity || "blank") + ") looks wrong");
+      if (slots === null || slots < 0 || !Number.isInteger(slots))
+        issues.push("the slots left (" + (t.slots_this_week || "blank") + ") is not a valid number");
+      else if (cap !== null && slots > cap)
+        issues.push(slots + " slots left is more than the group size of " + cap);
+
+      const allText = Object.values(t).join(" ");
+      if (SUSPICIOUS_TEXT.test(allText)) {
+        issues.push("the listing contains a note telling the assistant what to say, so its details may not be reliable");
+        (allText.match(/\d[\d,.]{3,}/g) || []).forEach(s => { const n = toNumber(s); if (n !== null) values.push(n); });
+      }
+      return { id: t.tour_id || "", name: t.tour_name || "Unnamed tour", issues, values };
+    }).filter(a => a.issues.length);
+  }
+
+  const norm = s => String(s).toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, " ").trim();
+  // "€888,888" / "888 888" / "888.888" -> "888888" so figures can be matched
+  const joinDigits = s => String(s).replace(/(\d)[,\s.](?=\d{3}(\D|$))/g, "$1");
+
+  function mentions(reply, flag) {
+    const r = " " + norm(reply) + " ", digits = joinDigits(reply);
+    if (flag.id && r.includes(" " + norm(flag.id) + " ")) return true;
+    if (r.includes(" " + norm(flag.name) + " ")) return true;
+    return flag.values.some(v => new RegExp("(^|\\D)" + v + "(\\D|$)").test(digits));
+  }
+
+  function euroAmountsIn(reply) {
+    const found = [], re = /(?:€|\beur\b|\beuros?\b)\s?(\d[\d,.]*)|(\d[\d,.]*)\s?(?:€|eur\b|euros?\b)/gi;
+    let m;
+    while ((m = re.exec(reply))) { const n = toNumber(m[1] || m[2]); if (n !== null) found.push(n); }
+    return [...new Set(found)];
+  }
+
+  function cautionsFor(reply, csv) {
+    let flags = [];
+    try { flags = auditTours(parseCsv(csv)); } catch (_) { /* never block the answer */ }
+    const notes = flags
+      .filter(f => mentions(reply, f))
+      .map(f => f.name + (f.id ? " (" + f.id + ")" : "") + ": " + f.issues.join("; ") + ".");
+    const explained = new Set(flags.flatMap(f => f.values));
+    euroAmountsIn(reply)
+      .filter(n => n > LIMITS.priceMax && !explained.has(n))
+      .forEach(n => notes.push("The answer mentions " + euro(n) + ", which is far higher than our usual tour prices."));
+    return notes;
+  }
+
+  function addCaution(msgEl, notes) {
+    msgEl.classList.add("cautious");
+    const box = document.createElement("div");
+    box.className = "caution";
+    box.setAttribute("role", "note");
+    const title = document.createElement("strong");
+    title.textContent = "⚠ Please double-check with our staff before booking";
+    const list = document.createElement("ul");
+    notes.forEach(n => { const li = document.createElement("li"); li.textContent = n; list.appendChild(li); });
+    const foot = document.createElement("p");
+    foot.textContent = "Some figures in our live listings look unusual, so treat them as unconfirmed.";
+    box.append(title, list, foot);
+    msgEl.insertBefore(box, msgEl.querySelector(".meta"));
+  }
+
   async function handleQuestion(question) {
     question = question.trim();
     if (!question) return;
@@ -311,7 +438,9 @@
       const { csv, fetchedAt } = await fetchCsv();
       const reply = await askBrain(question, csv);
       thinking.remove();
-      addMessage(reply, "bot", { meta: "Data fetched live at " + fetchedAt });
+      const answer = addMessage(reply, "bot", { meta: "Data fetched live at " + fetchedAt });
+      const notes = cautionsFor(reply, csv);
+      if (notes.length) { addCaution(answer, notes); chat.scrollTop = chat.scrollHeight; }
     } catch (err) {
       thinking.remove();
       addMessage("Sorry, something went wrong. " + err.message, "bot", { error: true, meta: "Error at " + timeNow() });
