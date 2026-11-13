@@ -38,9 +38,13 @@
     background: var(--bg);
   }
   header {
-    background: linear-gradient(135deg, var(--navy), var(--navy-2));
+    background:
+      linear-gradient(180deg, rgba(11, 42, 63, .35) 0%, rgba(11, 42, 63, .85) 100%),
+      url("img/Cliffs%20of%20moher.jpg") center 35% / cover no-repeat,
+      linear-gradient(135deg, var(--navy), var(--navy-2)); /* fallback if the photo is missing */
     color: #fff;
-    padding: 16px 16px 14px;
+    padding: 44px 16px 22px;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, .45);
     display: flex;
     align-items: center;
     gap: 12px;
@@ -87,6 +91,48 @@
   .user .bubble { background: var(--user-bubble); border-bottom-right-radius: 6px; }
   .error .bubble { background: var(--error-bg); color: var(--error-ink); border-left-color: var(--error-ink); }
   .meta { font-size: .72rem; color: var(--muted); margin: 4px 6px 0; }
+
+  /* Photo cards in the welcome message */
+  .msg.welcome { max-width: 100%; align-self: stretch; min-width: 0; }
+  .msg.welcome .bubble { max-width: 85%; }
+  .gallery {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding: 10px 2px 6px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;            /* hide scrollbar (Firefox) – still swipeable */
+  }
+  .gallery::-webkit-scrollbar { display: none; } /* hide scrollbar (Chrome/Edge/Safari) */
+  @media (min-width: 560px) {
+    .gallery { overflow: visible; }
+    .place { flex: 1 1 0; min-width: 0; max-width: none; } /* all three cards fit side by side */
+  }
+  .place {
+    position: relative;
+    flex: 0 0 70%;
+    max-width: 230px;
+    aspect-ratio: 4 / 3;
+    border: 0;
+    padding: 0;
+    border-radius: 14px;
+    overflow: hidden;
+    cursor: pointer;
+    scroll-snap-align: start;
+    background: var(--navy);
+    box-shadow: 0 2px 8px rgba(11, 42, 63, .15);
+  }
+  .place img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .3s ease; }
+  .place:hover img, .place:focus-visible img { transform: scale(1.05); }
+  .place span {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 22px 10px 8px;
+    background: linear-gradient(transparent, rgba(11, 42, 63, .9));
+    color: #fff; font-size: .8rem; font-weight: 600; text-align: left; line-height: 1.25;
+  }
+  .place small { display: block; font-weight: 400; opacity: .85; }
+  .place:disabled { cursor: default; opacity: .7; }
 
   .thinking .bubble { color: var(--muted); font-style: italic; }
   .dots span {
@@ -214,7 +260,15 @@
 
   async function fetchCsv() {
     // Cache-buster + no-store so every question sees the latest sheet edits
-    const res = await fetch(CSV_URL + "&t=" + Date.now(), { cache: "no-store" });
+    let res;
+    try {
+      res = await fetch(CSV_URL + "&t=" + Date.now(), { cache: "no-store" });
+    } catch (e) {
+      if (location.protocol === "file:") {
+        throw new Error("Couldn't load the tour catalogue because this page was opened as a file (file://). Google blocks that. Open it from a web address instead, e.g. GitHub Pages or a local server like http://localhost:8000.");
+      }
+      throw new Error("Couldn't reach the tour catalogue (Google Sheets): " + e.message + ". Check your internet connection, or try turning off ad/privacy blockers.");
+    }
     if (!res.ok) throw new Error("Couldn't load the tour catalogue (HTTP " + res.status + "). Is the sheet shared as 'Anyone with the link'?");
     const csv = await res.text();
     if (/^\s*<!DOCTYPE html/i.test(csv)) throw new Error("The sheet returned a web page instead of CSV. Check it is shared as 'Anyone with the link can view'.");
@@ -222,14 +276,19 @@
   }
 
   async function askBrain(question, csv) {
-    const res = await fetch(BRAIN_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        system: SYSTEM,
-        messages: [{ role: "user", content: "Live data (CSV):\n" + csv + "\n\nCustomer question: " + question }]
-      })
-    });
+    let res;
+    try {
+      res = await fetch(BRAIN_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system: SYSTEM,
+          messages: [{ role: "user", content: "Live data (CSV):\n" + csv + "\n\nCustomer question: " + question }]
+        })
+      });
+    } catch (e) {
+      throw new Error("Got the tour data, but couldn't reach the class assistant (luas-class.kluxy.app): " + e.message + ". It may be briefly down, or blocked by an ad/privacy blocker or this network. Please try again.");
+    }
     const raw = await res.text();
     let data;
     try { data = JSON.parse(raw); } catch { throw new Error("The assistant sent an unexpected response (HTTP " + res.status + "): " + raw.slice(0, 200)); }
@@ -255,10 +314,7 @@
       addMessage(reply, "bot", { meta: "Data fetched live at " + fetchedAt });
     } catch (err) {
       thinking.remove();
-      const msg = err instanceof TypeError
-        ? "Network error: " + err.message + " (check your connection, or the service may be blocking this page)."
-        : err.message;
-      addMessage("Sorry, something went wrong. " + msg, "bot", { error: true });
+      addMessage("Sorry, something went wrong. " + err.message, "bot", { error: true, meta: "Error at " + timeNow() });
     } finally {
       input.disabled = false;
       send.disabled = false;
@@ -276,7 +332,35 @@
     if (e.target.tagName === "BUTTON") handleQuestion(e.target.textContent);
   });
 
-  addMessage("Hi! I'm Ask Atlantic 🌊 Ask me anything about our tours: prices, slots this week, meeting points or special offers.", "bot");
+  const welcome = addMessage("Hi! I'm Ask Atlantic 🌊 Ask me anything about our tours: prices, slots this week, meeting points or special offers. Or tap a place below.", "bot");
+  welcome.classList.add("welcome");
+
+  const PLACES = [
+    { img: "img/Cliffs%20of%20moher.jpg",     name: "Cliffs of Moher",     where: "Co. Clare",        q: "Do you have any tours to the Cliffs of Moher?" },
+    { img: "img/Dogs%20Beach.jpg",            name: "Dog's Bay",           where: "Connemara",        q: "What tours do you have in Connemara?" },
+    { img: "img/fastnet-lighthouse.jpg",      name: "Fastnet Lighthouse",  where: "Co. Cork",         q: "Do you have any boat tours, and how many slots are left?" }
+  ];
+  const gallery = document.createElement("div");
+  gallery.className = "gallery";
+  PLACES.forEach(p => {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "place";
+    const img = document.createElement("img");
+    img.src = p.img;
+    img.alt = p.name + ", " + p.where;
+    img.loading = "lazy";
+    img.onerror = () => card.remove(); // hide the card if the photo is missing
+    const label = document.createElement("span");
+    label.textContent = p.name;
+    const small = document.createElement("small");
+    small.textContent = p.where;
+    label.appendChild(small);
+    card.append(img, label);
+    card.addEventListener("click", () => { if (!send.disabled) handleQuestion(p.q); });
+    gallery.appendChild(card);
+  });
+  welcome.appendChild(gallery);
   input.focus();
 </script>
 </body>
